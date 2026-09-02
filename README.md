@@ -16,9 +16,11 @@ com um dicionário de dados e medidas DAX próprios.
 - 66 registros consolidados: 55 GCUB-MOB + 11 ERASMUS+.
 - Modalidades "Move La América" e "PROAFRI" já estão no modelo, mas ainda
   sem dados (`Aguardando dados`).
-- Atualizado pela última vez em 28/08/2026 (`Nome_ABNT` passou a trazer
-  todas as iniciais do nome — SOBRENOME, I. I. I. — em vez de só a
-  primeira; ver seção Privacidade).
+- Atualizado pela última vez em 28/08/2026: `Nome_ABNT` passou a trazer
+  todas as iniciais do nome (SOBRENOME, I. I. I., em vez de só a
+  primeira — ver seção Privacidade) e `Continente_Origem` passou a
+  distinguir "América Central" de "América do Norte" (Haiti e Honduras
+  foram reclassificados).
 
 ## O modelo de dados
 
@@ -50,8 +52,8 @@ tem duas mobilidades aparece duas vezes). Principais colunas:
 
 - **`Dim_Programas_Mobilidade`** — as 4 modalidades (GCUB-MOB, ERASMUS+,
   Move La América, PROAFRI), com status da base (`Dados consolidados e
-  revisados` / `Aguardando dados`) e público-alvo. Alimenta a lista
-  suspensa de modalidade no topo do painel.
+  revisados` / `Aguardando dados`) e público-alvo. Alimenta o painel
+  "Programa de mobilidade" (botões coloridos, um por modalidade).
 - **`Dim_Participantes_dados reais`** — uma linha por pessoa. Além dos
   campos restritos (ver Privacidade), tem as colunas `Nome_ABNT` (nome
   formatado como citação acadêmica, SOBRENOME, I. I. I. — uma inicial por
@@ -122,17 +124,19 @@ restrita:
 ## Estrutura
 
 ```
-index.html          página pública — publicada em GitHub Pages
+index.html           página pública — painel principal, publicada em GitHub Pages
 flowmap.html          página pública — mapa de fluxo animado (Manaus ⇄ países)
-interno.html         página de uso interno — nome completo, contato e acompanhamento por participante (gitignored, não publicar)
-css/style.css        tokens + componentes (design system PROPESP/UEA) + estilos específicos (inclui o mapa de fluxo)
-js/data.js           dados de Fato_Mobilidades + Nome_ABNT/Sexo_Genero + dimensão de modalidades (sem e-mail/telefone)
-js/main.js           tema claro/escuro, filtros, mapa, gráficos, rankings, lista de participantes (index.html)
-js/flowmap.js         linhas animadas Manaus ⇄ país, com coordenadas de país fixas no próprio arquivo (flowmap.html)
-js/data-interno.js    join de Fato_Mobilidades + Dim_Participantes_dados reais + Fato_Acompanhamento + Pendencias_Conferencia (gitignored)
-js/interno.js         busca, tabela e painel de detalhe (interno.html)
-lib/                 d3.v7, topojson-client e o atlas mundial (countries-110m.json)
-image/               logo PROPESP UEA
+relatorio.html         página pública — relatório em HTML com opção de exportar PDF
+interno.html          página de uso interno — nome completo, contato e acompanhamento por participante (gitignored, não publicar)
+css/style.css         tokens + componentes (design system PROPESP/UEA) + estilos específicos (mapa de fluxo, relatório)
+js/data.js            dados de Fato_Mobilidades + Nome_ABNT/Sexo_Genero + dimensão de modalidades (sem e-mail/telefone)
+js/main.js            tema claro/escuro, filtros (persistidos em localStorage), mapa, gráficos, rankings, lista de participantes (index.html)
+js/flowmap.js          linhas animadas Manaus ⇄ país; lê os mesmos filtros do Painel via localStorage (flowmap.html)
+js/relatorio.js        tabelas + gráficos estáticos do recorte filtrado atual, botão "Exportar PDF" via window.print() (relatorio.html)
+js/data-interno.js     join de Fato_Mobilidades + Dim_Participantes_dados reais + Fato_Acompanhamento + Pendencias_Conferencia (gitignored)
+js/interno.js          busca, tabela e painel de detalhe (interno.html)
+lib/                  d3.v7, topojson-client e o atlas mundial (countries-110m.json)
+image/                logo PROPESP UEA
 ```
 
 ## Rodar localmente
@@ -140,55 +144,74 @@ image/               logo PROPESP UEA
 ```
 cd "DASHBOARD MOBILIDADE"
 python3 -m http.server 8080
-# página pública (painel):     http://localhost:8080/index.html
-# página pública (mapa de fluxo): http://localhost:8080/flowmap.html
-# uso interno (restrito):      http://localhost:8080/interno.html
+# painel:                        http://localhost:8080/index.html
+# mapa de fluxo:                 http://localhost:8080/flowmap.html
+# relatório (exportar PDF):      http://localhost:8080/relatorio.html
+# uso interno (restrito):        http://localhost:8080/interno.html
 ```
 
-## Funcionalidades (página pública)
+## Funcionalidades (páginas públicas)
+
+### Filtros — combináveis e compartilhados entre as três páginas públicas
+
+- **Clicáveis em praticamente todo painel**: programa de mobilidade,
+  nível acadêmico, gênero, situação da participação, continente, PPG
+  (sigla), país, fluxo/tipo de mobilidade e fonte de financiamento.
+- **Nível acadêmico é multi-seleção** (clicar em "Mestrado" e depois em
+  "Doutorado" mostra os dois somados) — tanto pelos cartões "Nível
+  acadêmico" quanto pela legenda de "Evolução por edição", que
+  controlam a mesma seleção. As demais dimensões continuam seleção
+  única (clicar substitui a anterior).
+- **Barra de filtros ativos** logo abaixo dos indicadores — um chip
+  removível por filtro (dimensões multi-seleção geram um chip por
+  valor escolhido) e um botão "Limpar filtros".
+- **Persistem entre páginas via `localStorage`** (chave
+  `"mobuea-filters"`): o recorte definido no Painel continua valendo ao
+  abrir o Mapa de Fluxo ou o Relatório, nos dois sentidos — limpar um
+  filtro no Mapa de Fluxo também limpa no Painel.
+- **Ícones de ajuda (`!`)** no lugar do texto explicativo de cada
+  painel — clique para abrir/fechar o popup (os cartões de KPI do
+  topo, sem ícone próprio, usam hover parado por ~3s).
 
 ### Painel (`index.html`)
 
-- **Lista suspensa de modalidade** no topo (Todas / GCUB-MOB / ERASMUS+ /
-  Move La América / PROAFRI, com contagem entre parênteses) — as duas
-  últimas aparecem mesmo com 0 registros, prontas para quando a base
-  chegar.
-- **Filtros clicáveis em praticamente todo painel** — modalidade, nível
-  acadêmico, gênero, situação da participação, continente, PPG (sigla),
-  país, fluxo/tipo de mobilidade e fonte de financiamento — todos
-  combináveis entre si. Não há mais filtro por edição (o painel
-  "Edições" foi removido; "Evolução por edição" continua mostrando a
-  linha do tempo completa como contexto, sem ser um filtro).
-- **Barra de filtros ativos** logo abaixo dos indicadores, com um chip
-  removível por filtro e um botão "Limpar filtros".
-- **Ícones de ajuda (`!`)** no lugar do texto explicativo de cada painel —
-  clique no ícone para abrir/fechar o popup com a explicação completa
-  (nos cartões de KPI do topo, que não têm ícone próprio, continua sendo
-  hover parado por ~3s).
-- Mapa coroplético dos países de origem (indicadores oficiais).
-- Evolução por edição (mestrado × doutorado × graduação).
-- Infográfico de gênero (barra dividida + legenda com percentuais).
-- Painel "PPG — Siglas" — ranking de `Codigo_PPG` (sigla); passe o mouse
-  numa sigla para ver o nome completo do programa.
-- Cartões de Fluxo (IN/OUT) e Tipo de Mobilidade.
+- Cartões de indicadores (Cadastrados, Total oficial, Recebidos, %
+  Recebidos, Países de origem, PPGs envolvidos) centralizados no topo.
+- "Programa de mobilidade" — um botão colorido por modalidade (GCUB-MOB
+  verde escuro, ERASMUS+ azul royal, Move La América vermelho, PROAFRI
+  amarelo), no topo da coluna esquerda.
+- Mapa coroplético dos países de origem (indicadores oficiais) e
+  "Continente de Origem" em barras (inclui América Central, distinta de
+  América do Norte).
+- "Evolução por edição": barras empilhadas (mestrado × doutorado ×
+  graduação) + linha pontilhada de alunos acumulados no eixo direito.
+  Botões "Barra" e "Linha" no cabeçalho ocultam cada série
+  independentemente; a legenda dos níveis é clicável (filtro
+  multi-seleção).
+- "Ranking de países": barras horizontais alinhadas à direita, com
+  nome do país e valor escritos dentro da própria barra.
+- "PPG — Siglas": etiquetas com `Codigo_PPG`; passe o mouse numa sigla
+  para ver o nome completo do programa.
+- Cartões de Fluxo (IN/OUT) e Tipo de Mobilidade; ranking de fonte de
+  financiamento.
 - Lista de participantes com nome em formato ABNT, com busca por nome/
-  país/PPG, logo abaixo do gráfico de evolução.
-- Ranking de países, fonte de financiamento.
-- Barra de aviso de privacidade em toda a largura, no rodapé da página.
+  país/PPG.
+- Botão "Gerar relatório" no topo abre `relatorio.html` numa nova aba.
+- Barra de aviso de privacidade em toda a largura, e assinatura
+  "Powered by William Pinheiro" / fonte dos dados no rodapé.
 - Tema claro/escuro persistido (localStorage), sem flash no carregamento
   e com todos os gráficos recolorindo corretamente ao trocar de tema.
 
 ### Mapa de Fluxo (`flowmap.html`)
 
-Página própria (link "Mapa de Fluxo" no topo de ambas as páginas) com um
-mapa-múndi onde cada país de origem/destino se liga a Manaus por uma
-linha animada (efeito "formiguinha" via `stroke-dashoffset`):
+Mapa-múndi onde cada país de origem/destino se liga a Manaus por uma
+linha animada (efeito "formiguinha" via `stroke-dashoffset`), respeitando
+os filtros ativos do Painel:
 
-- Linha verde = fluxo **IN** (o país de origem → Manaus); linha laranja =
+- Linha verde = fluxo **IN** (país de origem → Manaus); linha laranja =
   fluxo **OUT** (Manaus → país de destino) — hoje só há dados de IN
-  (`Fluxo_Mobilidade` = `OUT` ainda não tem registros reais na base).
-  A direção do desenho da linha (não uma seta) já indica o sentido do
-  fluxo.
+  (`Fluxo_Mobilidade` = `OUT` ainda não tem registros reais na base). A
+  direção do desenho da linha (sem seta na ponta) já indica o sentido.
 - Espessura da linha e tamanho do ponto do país são proporcionais ao
   número de estudantes.
 - Coordenadas dos ~15 países envolvidos são aproximações fixas em
@@ -196,6 +219,20 @@ linha animada (efeito "formiguinha" via `stroke-dashoffset`):
   latitude/longitude, só o país e o código ISO.
 - Tooltip ao passar o mouse numa linha ou num ponto mostra o país e a
   quantidade.
+
+### Relatório (`relatorio.html`)
+
+Documento de uma coluna, aberto pelo botão "Gerar relatório" do Painel,
+com o recorte de filtros ativo no momento:
+
+- Resumo de KPIs, os gráficos de países de origem (mapa) e evolução por
+  edição, e tabelas por programa de mobilidade, país, PPG, nível,
+  gênero, situação, financiamento, continente e a lista completa de
+  participantes.
+- Botão "Exportar PDF" aciona a impressão do navegador — use "Salvar
+  como PDF" no diálogo nativo para gerar o arquivo (evita chamar
+  `window.print()` direto do Painel, que trava a página com o diálogo
+  modal).
 
 ## Publicar / atualizar o GitHub Pages
 
