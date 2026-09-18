@@ -1,6 +1,8 @@
 # Dashboard Mobilidade Acadêmica Internacional — UEA
 
-**Acesse online:** https://willpine1992.github.io/mobilidade-uea/
+**Acesse online:**
+- https://willpine1992.github.io/mobilidade-uea/
+- https://internacionalizacao-create.github.io/mobilidade-uea/
 
 Painel estático (HTML/CSS/JS, sem build step) com a identidade visual
 PROPESP/UEA, mostrando os estudantes estrangeiros recebidos na
@@ -236,9 +238,13 @@ com o recorte de filtros ativo no momento:
 
 ## Publicar / atualizar o GitHub Pages
 
-O Pages já está configurado para servir a raiz da branch `main`. Qualquer
-`git push` para `main` atualiza https://willpine1992.github.io/mobilidade-uea/
-em alguns minutos. Antes de commitar, confira `git status` para garantir
+O Pages já está configurado para servir a raiz da branch `main` nos dois
+repositórios remotos (`origin` tem dois push URLs). Qualquer `git push`
+atualiza os dois em alguns minutos:
+- https://willpine1992.github.io/mobilidade-uea/
+- https://internacionalizacao-create.github.io/mobilidade-uea/
+
+Antes de commitar, confira `git status` para garantir
 que `interno.html` e `js/data-interno.js` continuam fora (o `.gitignore`
 já cuida disso, mas vale checar após qualquer renomeação de arquivo).
 
